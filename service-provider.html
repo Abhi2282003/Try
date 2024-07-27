@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blocked Users Dashboard</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f4f4f4;
+    }
+    
+    h1 {
+      text-align: center;
+      margin-top: 20px;
+    }
+
+    .container {
+      width: 80%;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+
+    label {
+      display: block;
+      margin-bottom: 10px;
+      font-size: 16px;
+    }
+
+    select {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 20px;
+      font-size: 16px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 12px;
+      text-align: left;
+    }
+
+    th {
+      background-color: #f4f4f4;
+    }
+
+    tr:nth-child(even) {
+      background-color: #f9f9f9;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Blocked Users Dashboard</h1>
+    <div>
+      <label for="wardId">Select Ward:</label>
+      <select id="wardId" onchange="fetchBlockedUsers()">
+        <!-- Options will be dynamically populated -->
+      </select>
+    </div>
+    <table id="blockedUsersTable">
+      <thead>
+        <tr>
+          <th>User ID</th>
+          <th>Name</th>
+          <th>Unpaid Property Tax</th>
+          <th>Unpaid Water Tax</th>
+          <th>Unpaid Garbage Tax</th>
+         
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Blocked users will be dynamically populated -->
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      fetchWards();
+    });
+
+    function fetchWards() {
+      fetch('http://localhost:3000/wards')
+        .then(response => response.json())
+        .then(wards => {
+          const wardSelect = document.getElementById('wardId');
+          wards.forEach(ward => {
+            const option = document.createElement('option');
+            option.value = ward._id;
+            option.textContent = ward.name;
+            wardSelect.appendChild(option);
+          });
+        })
+        .catch(error => console.error('Error fetching wards:', error));
+    }
+
+    function fetchBlockedUsers() {
+      const wardId = document.getElementById('wardId').value;
+      if (!wardId) return;
+
+      fetch(`http://localhost:3000/blockedUsers/${wardId}`)
+        .then(response => response.json())
+        .then(blockedUsers => {
+          const tableBody = document.querySelector('#blockedUsersTable tbody');
+          tableBody.innerHTML = ''; // Clear previous results
+          blockedUsers.forEach(user => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+              <td>${user.userId}</td>
+              <td>${user.name}</td>
+              <td>${user.unpaidTaxes.propertyTax}</td>
+              <td>${user.unpaidTaxes.waterTax}</td>
+              <td>${user.unpaidTaxes.garbageTax}</td>
+             
+            `;
+            tableBody.appendChild(row);
+          });
+        })
+        .catch(error => console.error('Error fetching blocked users:', error));
+    }
+  </script>
+</body>
+</html>

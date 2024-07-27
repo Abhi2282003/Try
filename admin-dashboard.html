@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Overview</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background-color: #f8f9fa;
+      color: #333;
+      margin: 0;
+      display: flex;
+    }
+    
+    .header {
+      display: flex;
+      align-items: center;
+      background-color: #ff6600;
+      color: #fff;
+      padding: 10px 20px;
+      border-bottom: 2px solid #e65c00;
+      margin-bottom: 20px;
+      flex: 1;
+    }
+    
+    .header img {
+      width: 80px;
+      margin-right: 15px;
+    }
+    
+    .header h1 {
+      margin: 0;
+      font-size: 24px;
+    }
+    
+    h2 {
+      color: #ff6600;
+      margin-top: 20px;
+      border-bottom: 2px solid #ff6600;
+      padding-bottom: 10px;
+    }
+    
+    button {
+      margin-top: 10px;
+      padding: 10px 20px;
+      background-color: #ff6600;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    
+    button:hover {
+      background-color: #cc5200;
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      background-color: #fff;
+      border-radius: 5px;
+      overflow: hidden;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+    
+    th {
+      background-color: #f2f2f2;
+      color: #333;
+    }
+    
+    tr:nth-child(even) {
+      background-color: #f9f9f9;
+    }
+    
+    tr:hover {
+      background-color: #f1f1f1;
+    }
+    
+    select {
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 5px;
+      border: 1px solid #ddd;
+      width: 100%;
+      max-width: 300px;
+    }
+    
+    .container {
+      margin-top: 20px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      padding: 20px;
+      background-color: #fff;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    .section {
+      margin-bottom: 30px;
+    }
+    
+    .alert {
+      padding: 10px;
+      border-radius: 5px;
+      margin-top: 20px;
+      background-color: #fff3cd;
+      color: #856404;
+      border: 1px solid #ffeeba;
+      display: none;
+    }
+    
+    
+    
+    
+    .sidebar {
+      width: 250px;
+      background-color: #fff;
+      color: #000;
+      padding: 20px;
+      box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+      position: fixed;
+      left: 0;
+      top: 0px; /* Adjust this value to shift the sidebar down */
+      height: calc(100% - 60px); /* Adjust this to account for the shifted position */
+      transform: translateX(0);
+      transition: transform 0.3s ease;
+      z-index: 999;
+    }
+    
+    .sidebar.active {
+      transform: translateX(-100%); /* Hide the sidebar when active */
+    }
+    
+    .sidebar ul li a {
+      color: #000; /* Changed text color to black */
+      text-decoration: none;
+      font-size: 16px;
+    }
+    
+    .sidebar ul {
+      list-style-type: none;
+      padding: 0;
+    }
+    
+    .sidebar ul li {
+      margin-bottom: 15px;
+    }
+    
+    .sidebar ul li a:hover {
+      text-decoration: underline;
+    }
+    
+    .main-content {
+      margin-left: 270px;
+      padding: 20px;
+      flex: 1;
+      transition: margin-left 0.3s;
+    }
+    
+    .main-content.active {
+      margin-left: 0; /* Adjust main content when sidebar is hidden */
+    }
+    
+  </style>
+</head>
+<body>
+  
+  
+  <div class="sidebar" id="sidebar">
+    <h2>Menu</h2>
+    <ul>
+      <li><a href="index.html">Dashboard</a></li>
+      <li><a href="#">Logout</a></li>
+    </ul>
+  </div>
+  
+  <div class="main-content" id="mainContent">
+    <div class="header">
+      <img src="Screenshot 2024-07-27 193852.png" alt="Logo">
+      <h1>Overview</h1>
+    </div>
+    <div class="section">
+      <h2>Ward-Wise Tax Distribution</h2>
+      <div class="container">
+        <canvas id="wardTaxChart"></canvas>
+      </div>
+    </div>
+    
+    <div class="section">
+      <h2>Total Remaining Tax by Ward</h2>
+      <button onclick="fetchTotalRemainingTax()">Fetch Total Remaining Tax</button>
+      <div class="container">
+        <table id="remainingTaxTable">
+          <thead>
+            <tr>
+              <th>Ward</th>
+              <th>Total Remaining Tax</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Users in a Ward</h2>
+      <label for="wardSelect">Select Ward:</label>
+      <select id="wardSelect" onchange="fetchWardUsers()">
+        <!-- Options will be populated dynamically -->
+      </select>
+      <button onclick="fetchWardUsers()">Fetch Ward Users</button>
+      <div class="container">
+        <table id="wardUsersTable">
+          <thead>
+            <tr>
+              <th>User ID</th>
+              <th>Name</th>
+              <th>Property Tax</th>
+              <th>Water Tax</th>
+              <th>Garbage Tax</th>
+              <th>Total Tax</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Blocked Users</h2>
+      <label for="blockedWardSelect">Select Ward:</label>
+      <select id="blockedWardSelect" onchange="fetchBlockedUsers()">
+        <!-- Options will be populated dynamically -->
+      </select>
+      <button onclick="fetchBlockedUsers()">Fetch Blocked Users</button>
+      <div class="container">
+        <table id="blockedUsersTable">
+          <thead>
+            <tr>
+              <th>User ID</th>
+              <th>Name</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const mainContent = document.getElementById('mainContent');
+      sidebar.classList.toggle('active');
+      mainContent.classList.toggle('active');
+    }
+
+    async function fetchTotalRemainingTax() {
+      try {
+        const response = await fetch('http://localhost:3000/totalRemainingTax');
+        const data = await response.json();
+        const tbody = document.getElementById('remainingTaxTable').querySelector('tbody');
+        tbody.innerHTML = ''; // Clear previous data
+
+        data.forEach(item => {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td>${item.ward}</td>
+            <td>${item.totalRemainingTax}</td>
+          `;
+          tbody.appendChild(row);
+        });
+      } catch (error) {
+        console.error('Error fetching total remaining tax:', error);
+      }
+    }
+
+    async function fetchWardUsers() {
+      const wardId = document.getElementById('wardSelect').value;
+
+      if (!wardId) {
+        alert('Please select a ward');
+        return;
+      }
+
+      try {
+        const response = await fetch(`http://localhost:3000/wardUsers/${wardId}`);
+        const data = await response.json();
+        const tbody = document.getElementById('wardUsersTable').querySelector('tbody');
+        tbody.innerHTML = ''; // Clear previous data
+
+        data.forEach(item => {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td>${item.userId}</td>
+            <td>${item.name}</td>
+            <td>${item.propertyTax}</td>
+            <td>${item.waterTax}</td>
+            <td>${item.garbageTax}</td>
+            <td>${item.totalTax}</td>
+            <td>
+              ${item.isBlocked ? '<button onclick="resumeService(\'' + item.userId + '\')">Resume Service</button>' : '<button onclick="sendNotification(\'' + item.userId + '\')">Send Notification</button>'}
+              ${!item.isBlocked ? '<button onclick="blockUser(\'' + item.userId + '\')">Block User</button>' : ''}
+            </td>
+          `;
+          tbody.appendChild(row);
+        });
+      } catch (error) {
+        console.error('Error fetching ward users:', error);
+      }
+    }
+
+    async function fetchBlockedUsers() {
+      const wardId = document.getElementById('blockedWardSelect').value;
+
+      if (!wardId) {
+        alert('Please select a ward');
+        return;
+      }
+
+      try {
+        const response = await fetch(`http://localhost:3000/blockedUsers/${wardId}`);
+        const data = await response.json();
+        const tbody = document.getElementById('blockedUsersTable').querySelector('tbody');
+        tbody.innerHTML = ''; // Clear previous data
+
+        data.forEach(item => {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td>${item.userId}</td>
+            <td>${item.name}</td>
+            <td><button onclick="resumeService('${item.userId}')">Resume Service</button></td>
+          `;
+          tbody.appendChild(row);
+        });
+      } catch (error) {
+        console.error('Error fetching blocked users:', error);
+      }
+    }
+
+    async function sendNotification(userId) {
+      const message = prompt('Enter the notification message:');
+      if (!message) return;
+
+      try {
+        const response = await fetch('http://localhost:3000/sendNotification', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ userId, message }),
+        });
+
+        if (response.ok) {
+          alert('Notification sent successfully');
+        } else {
+          const errorData = await response.json();
+          alert(`Failed to send notification: ${errorData.error || 'An error occurred'}`);
+        }
+      } catch (error) {
+        console.error('Error sending notification:', error);
+        alert('Failed to send notification');
+      }
+    }
+
+    async function resumeService(userId) {
+      try {
+        const response = await fetch('http://localhost:3000/resumeService', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ userId }),
+        });
+
+        if (response.ok) {
+          alert('Service resumed successfully');
+          fetchWardUsers(); // Refresh users list
+          fetchBlockedUsers(); // Refresh blocked users list
+        } else {
+          const errorData = await response.json();
+          alert(`Failed to resume service: ${errorData.error || 'An error occurred'}`);
+        }
+      } catch (error) {
+        console.error('Error resuming service:', error);
+        alert('Failed to resume service');
+      }
+    }
+
+    async function fetchWards() {
+      try {
+        const response = await fetch('http://localhost:3000/wards');
+        if (!response.ok) {
+          throw new Error('Failed to fetch wards');
+        }
+        const data = await response.json();
+
+        const wardSelect = document.getElementById('wardSelect');
+        const blockedWardSelect = document.getElementById('blockedWardSelect');
+
+        wardSelect.innerHTML = '<option value="" disabled selected>Select Ward</option>';
+        blockedWardSelect.innerHTML = '<option value="" disabled selected>Select Ward</option>';
+
+        data.forEach(ward => {
+          const option = document.createElement('option');
+          option.value = ward._id;
+          option.textContent = ward.name;
+          wardSelect.appendChild(option);
+
+          const blockedOption = document.createElement('option');
+          blockedOption.value = ward._id;
+          blockedOption.textContent = ward.name;
+          blockedWardSelect.appendChild(blockedOption);
+        });
+      } catch (error) {
+        console.error('Error fetching wards:', error);
+        alert('Failed to fetch wards');
+      }
+    }
+
+    fetchWards(); // Populate wards dropdown on page load
+
+    async function blockUser(userId) {
+      try {
+        const response = await fetch('http://localhost:3000/blockUser', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId }),
+        });
+        const data = await response.json();
+        if (response.ok) {
+          alert(data.message);
+          fetchWardUsers(); // Refresh users list
+          fetchBlockedUsers(); // Refresh blocked users list
+        } else {
+          alert(`Error: ${data.error || data.message}`);
+        }
+      } catch (error) {
+        console.error('Error blocking user:', error);
+        alert('Failed to block user');
+      }
+    }
+  </script>
+</body>
+</html>
