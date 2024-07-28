@@ -1,22 +1,16 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const bodyParser = require('body-parser');
 
 const app = express();
 const port = 3000;
-const JWT_SECRET = '1615c71c8819747c9fb2122d602df8a3b98fdc10a1400da95c6dbc626e9f7257';
 
 // MongoDB Connection
 mongoose.connect('mongodb://localhost:27017/indore', {
     useNewUrlParser: true,
     useUnifiedTopology: true,
-}).then(() => {
-    console.log('Connected to MongoDB');
-}).catch((err) => {
-    console.error('Error connecting to MongoDB', err);
 });
 
 // Define User Schema and Model
@@ -32,72 +26,57 @@ const userSchema = new mongoose.Schema({
     waterTax: Number,
     garbageTax: Number,
     remainingAmount: { type: Number, default: 0 },
-});
-
-const adminSchema = new mongoose.Schema({
     username: String,
     password: String,
+    role: String // 'admin', 'user', 'service'
 });
 
 const User = mongoose.model('User', userSchema);
-const Admin = mongoose.model('Admin', adminSchema);
 
 // Middleware
 app.use(cors());
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(bodyParser.json());
+app.use(express.json());
 
-// Initial Admin User
-async function createInitialAdmin() {
-    const adminExists = await Admin.findOne({ username: 'Hack' });
-    if (!adminExists) {
-        const hashedPassword = await bcrypt.hash('indore', 10);
-        const newAdmin = new Admin({ username: 'Hack', password: hashedPassword });
-        await newAdmin.save();
-        console.log('Admin user created');
-    } else {
-        console.log('Admin user already exists');
-    }
-}
-createInitialAdmin();
+// Create some initial users for testing
+const createInitialUsers = async () => {
+    const hashedPassword = await bcrypt.hash('indore', 10);
 
-// Authentication Middleware
-function authenticateToken(req, res, next) {
-    const token = req.headers['authorization'];
-    if (!token) return res.sendStatus(401);
+    const admin = new User({ username: 'hack', password: hashedPassword, role: 'admin' });
+    const serviceProvider = new User({ username: 'service', password: hashedPassword, role: 'service' });
 
-    jwt.verify(token, JWT_SECRET, (err, user) => {
-        if (err) return res.sendStatus(403);
-        req.user = user;
-        next();
-    });
-}
+    await admin.save();
+    await serviceProvider.save();
+};
 
-// Login Route
+createInitialUsers();
+
+// Login Endpoint
 app.post('/login', async (req, res) => {
-    const { username, password } = req.body;
-
-    const admin = await Admin.findOne({ username });
-    if (!admin) return res.status(400).send('Cannot find user');
+    const { username, password, role } = req.body;
 
     try {
-        if (await bcrypt.compare(password, admin.password)) {
-            const user = { name: admin.username };
-            const accessToken = jwt.sign(user, JWT_SECRET);
-            res.json({ accessToken });
-        } else {
-            res.send('Not Allowed');
+        const user = await User.findOne({ username, role });
+        if (!user) {
+            return res.status(401).send('Invalid username or role');
         }
-    } catch {
-        res.status(500).send();
+
+        const isPasswordValid = await bcrypt.compare(password, user.password);
+        if (!isPasswordValid) {
+            return res.status(401).send('Invalid password');
+        }
+
+        const token = jwt.sign({ id: user._id, role: user.role }, 'secret_key', { expiresIn: '1h' });
+        res.json({ accessToken: token });
+    } catch (error) {
+        res.status(500).send('Internal Server Error');
     }
 });
 
 // Fetch User Details
-app.get('/fetchUserDetails/:userId', authenticateToken, async (req, res) => {
+app.get('/fetchUserDetails/:userId', async (req, res) => {
     try {
         const userId = req.params.userId;
-        const user = await User.findOne({ userId });
+        const user = await User.findOne({ userId: userId });
         if (user) {
             res.json(user);
         } else {
@@ -108,23 +87,29 @@ app.get('/fetchUserDetails/:userId', authenticateToken, async (req, res) => {
     }
 });
 
-// Mock Payment Route
-app.post('/mock-payment', authenticateToken, async (req, res) => {
+// Mock Payment Endpoint
+app.post('/mock-payment', async (req, res) => {
     const { userId, amount, currency, description, receipt_email } = req.body;
 
     console.log('Received payment request:', { userId, amount, currency, description, receipt_email });
 
+    // Simulate payment processing
     const success = Math.random() > 0.2; // 80% chance of success
 
     if (success) {
         try {
-            const user = await User.findOne({ userId });
-
+            // Find the user and update their remaining amount
+            const user = await User.findOne({ userId: userId });
+            
             if (!user) {
                 return res.status(404).json({ success: false, message: 'User not found.' });
             }
 
+            // Calculate the new remaining amount
+            const totalTax = user.propertyTax + user.waterTax + user.garbageTax;
             const remainingAmount = user.remainingAmount - amount;
+
+            // Update the remaining amount in the database
             user.remainingAmount = remainingAmount > 0 ? remainingAmount : 0;
             await user.save();
 
@@ -138,12 +123,12 @@ app.post('/mock-payment', authenticateToken, async (req, res) => {
     }
 });
 
-// Chatbot Route
+// Chatbot Endpoint
 app.post('/chatbot', (req, res) => {
     const { message } = req.body;
-
+    
     let response;
-
+    
     switch (message.toLowerCase()) {
         case 'hello':
             response = 'Hello! How can I assist you today?';
@@ -158,7 +143,7 @@ app.post('/chatbot', (req, res) => {
             response = 'I\'m sorry, I didn\'t understand that. Could you please rephrase?';
             break;
     }
-
+    
     res.json({ response });
 });
 
